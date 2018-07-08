@@ -2,19 +2,29 @@ require('dotenv').config();
 var Kafka = require("node-rdkafka");
 
 const topics = process.env.TOPICS.split(",");
+const outgoingTopic = "json-failed-test";
 const bootstrapServers = process.env.BOOTSTRAP_SERVERS.split(",");
 
-var kafkaConf = {
-  "group.id": "consumer-kafka",
+const producerConf = {
   "bootstrap.servers": bootstrapServers,
-  "socket.keepalive.enable": true, // only node lib
+  "group.id": "producer-kafka"
 };
 
-const consumer = new Kafka.KafkaConsumer(kafkaConf, {
-  "auto.offset.reset": "beginning"
+const producer = new Kafka.Producer(producerConf);
+producer.connect();
+
+const consumerConfig = {
+  "bootstrap.servers": bootstrapServers,
+  "group.id": "consumer-kafka",
+  "socket.keepalive.enable": true,
+  'enable.auto.offset.store': false
+};
+  
+const consumer = new Kafka.KafkaConsumer(consumerConfig, {
+  "enable.auto.commit": false,
+  "auto.offset.reset": "earliest"
 });
-const numMessages = 5;
-let counter = 0;
+
 consumer.on("error", function(err) {
   console.error(err);
 });
@@ -24,12 +34,14 @@ consumer.on("ready", function(arg) {
   consumer.consume();
 });
 consumer.on("data", function(m) {
-  counter++;
-  if (counter % numMessages === 0) {
-    console.log("calling commit");
-    consumer.commit(m);
+  console.log(m.value.toString())
+  try {
+    JSON.parse(m.value.toString());
+  } catch (err) {
+    console.log("failed")
+    producer.produce(outgoingTopic, -1, new Buffer(m.value.toString()));
   }
-  console.log(m.value.toString());
+  consumer.commit(m);
 });
 consumer.on("disconnected", function(arg) {
   process.exit();
@@ -43,6 +55,6 @@ consumer.on('event.log', function(log) {
 });
 consumer.connect();
 
-setTimeout(function() {
-  consumer.disconnect();
-}, 300000);
+// setTimeout(function() {
+//   consumer.disconnect();
+// }, 3000);

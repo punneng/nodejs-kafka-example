@@ -29,7 +29,7 @@ producer.on("ready", function(arg) {
   // - opaque 
   //   you can send an opaque token here, which gets passed along to your delivery reports
   // return true/false
-  const result = producer.produce(topic, -1, new Buffer("test3"), 'key-1');
+  const result = producer.produce(topic, -1, new Buffer("test1"));
   console.log('produce result', result)
   setTimeout(() => producer.disconnect(), 1000);
 });
