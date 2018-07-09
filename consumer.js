@@ -39,7 +39,11 @@ consumer.on("data", function(m) {
     JSON.parse(m.value.toString());
   } catch (err) {
     console.log("failed")
-    producer.produce(outgoingTopic, -1, new Buffer(m.value.toString()));
+    consumer.seek({
+      topic: topics[0],
+      partition: m.partition,
+      offset: m.offset - 5
+    }, 0, function() { console.log("set new offset")})
   }
   consumer.commit(m);
 });
